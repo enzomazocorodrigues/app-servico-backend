@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  app:
+    container_name: app
+    build: .
+    ports:
+      - "3000:3000"
+    depends_on: 
+      - postgres
+      - redis
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+    command: npm start
+    volumes:
+      - .:/usr/app
+  redis:
+    image: redis
+    container_name: redis
+  postgres:
+    image: postgres
+    container_name: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app_db
+    volumes:
+      - c:/users/enzor/postgres/data:/var/lib/postgresql/data
