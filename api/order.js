@@ -48,9 +48,12 @@ module.exports = app => {
 				.select('a.id', 'a.susp', 'a.idService', 'b.description')
 				.where({ idOrder: id })
 	
-			order.items = [...items]
+			const result = {
+				order,
+				items
+			}
 
-			res.status(200).json(order)
+			res.status(200).json(result)
 		} catch(err) {
 			res.status(500).send(err)
 		}
@@ -61,36 +64,28 @@ module.exports = app => {
     let order = { ...req.body }
 		
     try {
-			existsOrError(order.idUser, 'Usuário não informado.')
+			existsOrError(order.order.idPerson, 'Pessoa não informado.')
       existsOrError(order.items, 'Itens não informados.')
 
-			const items = order.items
-			delete order.items
-
-			if (order.id) {
-				order = await app.db('orders')
-					.update({ ...order })
-					.where({ id: order.id })
-					.returning(['id', 'susp', 'date', 'idUser'])
-			} else {
-				order.id = uuid()
-				order = await app.db('orders')
-					.insert({ ...order })
-					.returning(['id', 'susp', 'date', 'idUser'])
+			order.order.id = await syncObject(order.order.id, order.order, 21)
+			
+			if (order.items) {
+				order.items.forEach(async item => {
+					existsOrError(item.idService, 'Serviço não informado.')
+					existsOrError(item.price, 'Preço não informado.')
+					
+					await syncChildObject(order.order.id, item, 22)
+				})
 			}
 
-			items.forEach(async item => {
-				item.idOrder = order[0].id
-				return await saveItem(item)
-			})
-			
-			order = {
-				...order[0],
+			const result = {
+				order,
 				items
 			}
 
-			app.cache.set(`orders:${order.id}`, order)
-			res.status(200).json(order)
+			// app.cache.set(`orders:${order.order.id}`, result)
+
+			res.status(200).json(result)
     } catch(err) {
       res.status(400).send(err)
     }
